@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅游指南Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px 0;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-button:active {
+            transform: translateY(0);
+        }
+
+        .search-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.5rem;
+        }
+
+        .weather-icon {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .transport-icon {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .attractions-icon {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-subtitle {
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .card-content {
+            min-height: 200px;
+        }
+
+        /* 天气卡片样式 */
+        .weather-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .weather-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .weather-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .weather-date {
+            font-weight: 500;
+            color: #555;
+            min-width: 80px;
+        }
+
+        .weather-desc {
+            color: #666;
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .weather-temp {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .weather-temp .max {
+            color: #e74c3c;
+        }
+
+        .weather-temp .min {
+            color: #3498db;
+        }
+
+        /* 交通卡片样式 */
+        .transport-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .transport-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .transport-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .transport-type {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .transport-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .transport-detail-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .transport-detail-label {
+            font-weight: 500;
+            color: #888;
+            margin-right: 5px;
+        }
+
+        /* 景点卡片样式 */
+        .attractions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .attraction-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .attraction-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .attraction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .attraction-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .attraction-rating {
+            color: #f39c12;
+            font-weight: 600;
+        }
+
+        .attraction-category {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+
+        .attraction-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .attraction-ticket {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .results {
+                grid-template-columns: 1fr;
+            }
+
+            .search-form {
+                flex-direction: column;
+            }
+
+            .search-input {
+                min-width: auto;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 旅游指南Agent</h1>
+            <p>智能推荐目的地天气、交通和景点信息</p>
+        </div>
+
+        <div class="search-box">
+            <form class="search-form" id="searchForm">
+                <input
+                    type="text"
+                    class="search-input"
+                    id="queryInput"
+                    placeholder="例如：我想去北京玩，从上海出发，有什么推荐的吗？"
+                    required
+                >
+                <button type="submit" class="search-button" id="searchButton">
+                    查询推荐
+                </button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">正在为您查询旅游信息...</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="results" id="results">
+            <!-- 天气卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon weather-icon">🌤️</div>
+                    <div>
+                        <div class="card-title">目的地天气</div>
+                        <div class="card-subtitle" id="weatherCity">未来7天天气预报</div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="weather-list" id="weatherList"></div>
+                </div>
+            </div>
+
+            <!-- 交通卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon transport-icon">🚄</div>
+                    <div>
+                        <div class="card-title">交通方式推荐</div>
+                        <div class="card-subtitle" id="transportRoute">4种出行方式</div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="transport-list" id="transportList"></div>
+                </div>
+            </div>
+
+            <!-- 景点卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon attractions-icon">🏛️</div>
+                    <div>
+                        <div class="card-title">知名旅游景点</div>
+                        <div class="card-subtitle" id="attractionsCity">5个推荐景点</div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="attractions-list" id="attractionsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const queryInput = document.getElementById('queryInput');
+        const searchButton = document.getElementById('searchButton');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+
+        const weatherList = document.getElementById('weatherList');
+        const transportList = document.getElementById('transportList');
+        const attractionsList = document.getElementById('attractionsList');
+
+        const weatherCity = document.getElementById('weatherCity');
+        const transportRoute = document.getElementById('transportRoute');
+        const attractionsCity = document.getElementById('attractionsCity');
+
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const query = queryInput.value.trim();
+            if (!query) {
+                showError('请输入查询信息');
+                return;
+            }
+
+            // 显示加载状态
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            errorMessage.style.display = 'none';
+            searchButton.disabled = true;
+            searchButton.textContent = '查询中...';
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    displayResults(data.data);
+                } else {
+                    showError(data.error || '查询失败，请稍后重试');
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                showError('网络错误，请检查服务是否正常运行');
+            } finally {
+                // 隐藏加载状态
+                loading.style.display = 'none';
+                searchButton.disabled = false;
+                searchButton.textContent = '查询推荐';
+            }
+        });
+
+        function displayResults(data) {
+            console.log('显示结果:', data);
+
+            // 显示天气信息
+            if (data.weather && data.weather.data) {
+                displayWeather(data.weather.data, data.destination);
+            }
+
+            // 显示交通信息
+            if (data.transportation && data.transportation.data) {
+                displayTransportation(data.transportation.data);
+            }
+
+            // 显示景点信息
+            if (data.attractions && data.attractions.data) {
+                displayAttractions(data.attractions.data);
+            }
+
+            // 显示结果区域
+            results.style.display = 'grid';
+        }
+
+        function displayWeather(weatherData, destination) {
+            weatherCity.textContent = `${destination || weatherData.city || ''} - 未来7天天气预报`;
+            weatherList.innerHTML = '';
+
+            const daily = weatherData.daily || [];
+
+            daily.forEach(day => {
+                const weatherItem = document.createElement('div');
+                weatherItem.className = 'weather-item';
+
+                const dateStr = day.date || '';
+                const dateDisplay = dateStr.substring(5); // 只显示月-日
+
+                weatherItem.innerHTML = `
+                    <div class="weather-date">${dateDisplay}</div>
+                    <div class="weather-desc">${day.weather_desc || '未知'}</div>
+                    <div class="weather-temp">
+                        <span class="max">${day.max_temp}°</span> /
+                        <span class="min">${day.min_temp}°</span>
+                    </div>
+                `;
+
+                weatherList.appendChild(weatherItem);
+            });
+        }
+
+        function displayTransportation(transportData) {
+            const origin = transportData.origin || '出发地';
+            const destination = transportData.destination || '目的地';
+            transportRoute.textContent = `${origin} → ${destination} - 4种出行方式`;
+            transportList.innerHTML = '';
+
+            const options = transportData.options || [];
+
+            options.forEach(option => {
+                const transportItem = document.createElement('div');
+                transportItem.className = 'transport-item';
+
+                transportItem.innerHTML = `
+                    <div class="transport-type">${option.type || '未知交通方式'}</div>
+                    <div class="transport-details">
+                        <div class="transport-detail-item">
+                            <span class="transport-detail-label">时间：</span>${option.duration || '未知'}
+                        </div>
+                        <div class="transport-detail-item">
+                            <span class="transport-detail-label">费用：</span>${option.cost || '未知'}
+                        </div>
+                        <div class="transport-detail-item">
+                            <span class="transport-detail-label">优势：</span>${option.advantages || '无'}
+                        </div>
+                        <div class="transport-detail-item">
+                            <span class="transport-detail-label">适合：</span>${option.suitable_for || '所有人'}
+                        </div>
+                    </div>
+                `;
+
+                transportList.appendChild(transportItem);
+            });
+        }
+
+        function displayAttractions(attractionsData) {
+            attractionsCity.textContent = `${attractionsData.city || ''} - 5个推荐景点`;
+            attractionsList.innerHTML = '';
+
+            const attractions = attractionsData.attractions || [];
+
+            attractions.forEach(attraction => {
+                const attractionItem = document.createElement('div');
+                attractionItem.className = 'attraction-item';
+
+                const rating = attraction.rating ? `⭐ ${attraction.rating}` : '';
+
+                attractionItem.innerHTML = `
+                    <div class="attraction-header">
+                        <div class="attraction-name">${attraction.name || '未知景点'}</div>
+                        <div class="attraction-rating">${rating}</div>
+                    </div>
+                    <div class="attraction-category">${attraction.category || '景点'}</div>
+                    <div class="attraction-description">${attraction.description || '暂无描述'}</div>
+                    <div class="attraction-ticket">💰 门票：${attraction.ticket || '详见官网'}</div>
+                `;
+
+                attractionsList.appendChild(attractionItem);
+            });
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            results.style.display = 'none';
+        }
+
+        // 添加示例查询
+        const exampleQueries = [
+            '我想去北京玩，从上海出发，有什么推荐的吗？',
+            '从西安去成都旅游',
+            '杭州旅游推荐'
+        ];
+
+        // 点击示例快速填充
+        queryInput.addEventListener('focus', () => {
+            if (!queryInput.value) {
+                queryInput.placeholder = exampleQueries[Math.floor(Math.random() * exampleQueries.length)];
+            }
+        });
+    </script>
+</body>
+</html>
