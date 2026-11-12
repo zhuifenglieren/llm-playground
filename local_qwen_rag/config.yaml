@@ -1,0 +1,33 @@
+# 文档分块配置
+split:
+  chunk_size: 512
+  chunk_overlap: 100
+  chunk_save_path: "./data/split_chunks/chunks.jsonl"
+
+# 向量库配置
+chroma:
+  persist_path: "./vector_store/chroma_db"
+  collection_name: "pdf_knowledge_base"
+
+# 嵌入模型（本地轻量向量化）
+embedding:
+  model_name: "./models/all-MiniLM-L6-v2"
+  device: "cpu"
+
+llm:
+  model_path: "./models/Qwen1.5-0.5B-Chat"
+  device: "cpu"
+  temperature: 0.1
+  max_new_tokens: 512
+
+# BM25 + RRF融合参数
+retrieval:
+  top_k: 5
+  rrf_k: 60  # RRF超参，通用60
+  weight_vector: 0.6
+  weight_bm25: 0.4
+
+# 评估配置
+eval:
+  test_data_path: "./test_dataset/test_qa.json"
+  top_k_list: [1,3,5]

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金融智能分析助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #ffffff;
+            color: #333;
+        }
+
+        .wrap {
+            width: 100%;
+            padding-top: 120px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 42px;
+            color: #222;
+            font-weight: normal;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+
+        .mode-box {
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .mode-box select {
+            border: 1px solid #ccc;
+            padding: 4px 10px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .search-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        #input {
+            width: 520px;
+            height: 44px;
+            line-height: 44px;
+            padding: 0 15px;
+            border: 1px solid #ccc;
+            border-right: none;
+            border-radius: 24px 0 0 24px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #input:focus {
+            border-color: #3385ff;
+        }
+
+        #searchBtn {
+            width: 100px;
+            height: 44px;
+            background: #3385ff;
+            color: #fff;
+            border: none;
+            border-radius: 0 24px 24px 0;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #searchBtn:hover {
+            background: #2979f2;
+        }
+
+        #searchBtn:disabled {
+            background: #99b8f5;
+            cursor: not-allowed;
+        }
+
+        .result-wrap {
+            width: 600px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .step-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .step-title {
+            color: #3385ff;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .final-answer {
+            background: #f0f7ff;
+            border-radius: 8px;
+            padding: 18px;
+            margin: 20px 0;
+            border-left: 4px solid #3385ff;
+        }
+
+        .error-tip {
+            color: #f56c6c;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .status-tip {
+            color: #999;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1 class="logo">金融智能分析助手</h1>
+
+        <div class="mode-box">
+            <span>推理模式：</span>
+            <select id="modeSelect">
+                <option value="manual">手写 Prompt 解析</option>
+                <option value="fc">Function Calling</option>
+            </select>
+            <input type="hidden" id="sessionId">
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="input" placeholder="请输入金融查询问题，如：宁德时代2023年营收">
+            <button id="searchBtn" onclick="search()">搜索</button>
+        </div>
+
+        <div class="status-tip" id="statusTip"></div>
+        <div class="result-wrap" id="resultBox"></div>
+    </div>
+
+<script>
+    let running = false;
+
+    function clearResult() {
+        document.getElementById('resultBox').innerHTML = '';
+        document.getElementById('statusTip').innerText = '';
+    }
+
+    function setStatus(text) {
+        document.getElementById('statusTip').innerText = text;
+    }
+
+    async function search() {
+        if (running) return;
+        const question = document.getElementById('input').value.trim();
+        if (!question) {
+            alert("请输入查询问题");
+            return;
+        }
+
+        running = true;
+        clearResult();
+        setStatus("正在请求数据...");
+        document.getElementById('searchBtn').disabled = true;
+
+        const mode = document.getElementById('modeSelect').value;
+        const sid = document.getElementById('sessionId').value || null;
+
+        try {
+            const res = await fetch(`/query/${mode}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    question: question,
+                    max_steps: 10,
+                    session_id: sid || ""
+                })
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`请求异常 ${res.status}：${errText}`);
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const chunks = buffer.split("\n\n");
+                buffer = chunks.pop();
+
+                for (let chunk of chunks) {
+                    if (!chunk.startsWith("data: ")) continue;
+                    const jsonStr = chunk.slice(6);
+                    const data = JSON.parse(jsonStr);
+                    renderData(data);
+                }
+            }
+            setStatus("查询完成");
+        } catch (err) {
+            console.error(err);
+            document.getElementById('resultBox').innerHTML = `<div class="error-tip">请求失败：${err.message}</div>`;
+            setStatus("查询失败");
+        } finally {
+            running = false;
+            document.getElementById('searchBtn').disabled = false;
+        }
+    }
+
+    function renderData(data) {
+        const box = document.getElementById('resultBox');
+
+        if (data.type === "start") {
+            document.getElementById('sessionId').value = data.session_id;
+            return;
+        }
+
+        if (data.type === "action") {
+            const stepDom = document.createElement("div");
+            stepDom.className = "step-item";
+            let thoughtText = data.thought || "模型内部推理不可见";
+            stepDom.innerHTML = `
+                <div class="step-title">步骤 ${data.step} | 调用工具：${data.action}</div>
+                <div><strong>推理Thought：</strong>${thoughtText}</div>
+                <div><strong>参数：</strong>${JSON.stringify(data.action_input, null, 2)}</div>
+                <div><strong>返回数据：</strong>${data.observation}</div>
+            `;
+            box.appendChild(stepDom);
+        }
+
+        if (data.type === "final") {
+            const finalDom = document.createElement("div");
+            finalDom.className = "final-answer";
+            finalDom.innerHTML = `<strong>✅ 最终结论：</strong><br/>${data.answer}`;
+            box.appendChild(finalDom);
+        }
+    }
+
+    document.getElementById('input').addEventListener("keydown", function (e) {
+        if (e.key === "Enter") search();
+    })
+</script>
+</body>
+</html>

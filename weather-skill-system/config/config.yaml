@@ -1,0 +1,19 @@
+# 系统配置文件
+api:
+  # 通义千问 DashScope API Key
+  # 也可通过环境变量 DASHSCOPE_API_KEY 设置（优先级更高）
+  dashscope_api_key: "your_dashscope_api_key_here"
+
+skill:
+  default: weather_card
+  output_dir: ./output
+
+output:
+  # 文件名命名模式：
+  # content: 按查询内容（城市_时段）命名，适合分类归档
+  # timestamp: 按时间戳命名，每次运行生成新文件绝不覆盖
+  naming_mode: content
+
+runtime:
+  temperature: 0.7
+  timeout: 60

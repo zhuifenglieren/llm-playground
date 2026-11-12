@@ -1,0 +1,22 @@
+# 基础文档处理
+pypdf
+pdfplumber
+# 向量库与检索
+chromadb
+rank_bm25
+# 大模型、向量化
+transformers
+torch
+accelerate
+sentence-transformers
+# 配置、日志、数据存储
+pyyaml
+loguru
+jsonlines
+# 评估指标
+rouge-score
+nltk
+scikit-learn
+# 工具
+tqdm
+numpy
